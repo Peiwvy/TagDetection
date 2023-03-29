@@ -1,5 +1,6 @@
-// cpptemplates
-#include "app/app_example.h"
+// app
+#include "app_example.h"
+
 #include "cpptemplates/DParamConfig.h"
 #include "cpptemplates/demo.h"
 #include "cpptemplates/func.h"
@@ -8,8 +9,8 @@
 #include "tools/rosbag.h"
 // ros
 #include <dynamic_reconfigure/server.h>
-#include <ros/ros.h>
 #include <ros/callback_queue.h>
+#include <ros/ros.h>
 #include <std_msgs/Int32.h>
 #include <std_msgs/String.h>
 // standard c++
@@ -51,15 +52,15 @@ void dcfg_callback(cpptemplates::DParamConfig& cfg, uint32_t /*level*/) {
 struct ProgramConfigs {
   // rosbag
   std::string bag_file;
-  float bag_rate;
+  float       bag_rate;
   // app configuration file path
   std::string app_config;
 };
 REFLCPP_METAINFO(ProgramConfigs, , (bag_file)(bag_rate))
 REFLCPP_YAML(ProgramConfigs)
 
-void as_absolute_path(std::string &path, const std::string &prefix) {
-  if(!path.empty() && fs::path(path).is_relative()) {
+void as_absolute_path(std::string& path, const std::string& prefix) {
+  if (!path.empty() && fs::path(path).is_relative()) {
     path = fs::path(prefix) / path;
   }
 }
@@ -73,7 +74,7 @@ int main(int argc, char* argv[]) {
     return -1;
   }
   ROS_INFO_STREAM("configuring from " << argv[1]);
-  auto prog_cfg = YAML::LoadFile(argv[1]).as<ProgramConfigs>();
+  auto prog_cfg    = YAML::LoadFile(argv[1]).as<ProgramConfigs>();
   auto prefix_path = fs::path(argv[1]).parent_path();
   as_absolute_path(prog_cfg.bag_file, prefix_path);
   as_absolute_path(prog_cfg.app_config, prefix_path);
@@ -126,11 +127,11 @@ int main(int argc, char* argv[]) {
       bag_player.play_once();
     }
     // process ros message callback (sleep forever if no callbacks available)
-    if(bag_player.is_open()) {
+    if (bag_player.is_open()) {
       callbacks->callAvailable();
     } else {
       callbacks->callAvailable(ros::WallDuration(999));
-    }    
+    }
   }
 
   /****************************************/

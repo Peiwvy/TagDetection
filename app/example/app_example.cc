@@ -1,4 +1,4 @@
-#include "app/app_example.h"
+#include "app_example.h"
 #include <iostream>
 
 AppExample::AppExample(const std::string& config_file) {
