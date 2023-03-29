@@ -12,7 +12,7 @@
 
 #include <gtest/gtest.h>
 
-#include "modules/example.h"
+#include "example.h"
 
 TEST(example, get_age) {
   ModuleExample stu_a("Joel", 21);

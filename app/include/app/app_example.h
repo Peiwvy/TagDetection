@@ -1,6 +1,7 @@
 #pragma once
 
-#include "modules/example.h"
+// modules
+#include "example.h"
 
 #include <memory>
 #include <mutex>
