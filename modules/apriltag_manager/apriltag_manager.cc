@@ -5,19 +5,19 @@ ApriltagManager::ApriltagManager() {
 };
 
 apriltag_detection_t* ApriltagManager::get_old(size_t i) {
-  apriltag_detection_t* det;
+  apriltag_detection_t* det = nullptr;
   ::zarray_get(this->detections_, i, &det);
   return det;
 }
 
 auto ApriltagManager::get(size_t i) -> std::pair<int, std::vector<cv::Point2f>> {
-  apriltag_detection_t* det;
+  apriltag_detection_t* det = nullptr;
   ::zarray_get(this->detections_, i, &det);
 
   std::vector<cv::Point2f> points;
 
-  for (int i = 0; i < 4; i++) {
-    cv::Point2f pt(det->p[i][0], det->p[i][1]);
+  for (auto& i : det->p) {
+    cv::Point2f pt(i[0], i[1]);
     points.push_back(pt);
   }
 
@@ -28,16 +28,15 @@ size_t ApriltagManager::detect_num() {
   return static_cast<size_t>(zarray_size(detections_));
 }
 
-void ApriltagManager::apriltag_detector_detect(cv::Mat gray) {
+void ApriltagManager::apriltag_detector_detect(const cv::Mat& gray) {
   image_u8_t im = {.width = gray.cols, .height = gray.rows, .stride = gray.cols, .buf = gray.data};
   detections_   = ::apriltag_detector_detect(this->td_, &im);
 }
 
 void ApriltagManager::create_tag_detector(
-  std::string tag_family, double tag_decimate, double tag_blur, int tag_threads, bool tag_debug, bool tag_refine_edges) {
-  apriltag_family_t* tf;
+  const std::string& tag_family, double tag_decimate, double tag_blur, int tag_threads, bool tag_debug, bool tag_refine_edges) {
+  apriltag_family_t* tf = nullptr;
 
-  // check if provided tag family name is valid
   if (!strcmp(tag_family.c_str(), "tag36h11")) {
     tf = tag36h11_create();
   } else if (!strcmp(tag_family.c_str(), "tag25h9")) {
@@ -58,9 +57,6 @@ void ApriltagManager::create_tag_detector(
     printf("Unrecognized tag family name. Use e.g. \"tag36h11\".\n");
     exit(-1);
   }
-
-  // td_ = apriltag_detector_create();
-  // tf = tag16h5_create();
 
   apriltag_detector_add_family(this->td_, tf);
 
