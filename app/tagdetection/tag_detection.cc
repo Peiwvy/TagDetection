@@ -1,6 +1,6 @@
 #include "tag_detection.h"
 
-#include <math.h>
+#include <cmath>
 
 TagDetection::TagDetection(const std::string& config_file) {
   auto conf = YAML::LoadFile(config_file);
@@ -36,7 +36,7 @@ TagDetection::TagDetection(const std::string& config_file) {
     pts0.emplace_back(thirdv[0].as<float>(), thirdv[1].as<float>(), thirdv[2].as<float>());
     pts0.emplace_back(fourthv[0].as<float>(), fourthv[1].as<float>(), fourthv[2].as<float>());
 
-    tag_map.insert(std::make_pair(tagid.as<int>(), pts0));
+    tag_map_.insert(std::make_pair(tagid.as<int>(), pts0));
   }
 
   ap_ptr_ = std::make_unique<ApriltagManager>();
@@ -46,14 +46,14 @@ TagDetection::TagDetection(const std::string& config_file) {
 void TagDetection::feed_pointcloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr pcl) {
   std::unique_lock lock(pointcloud_ptr_mtx_);
 
-  pcq.push(pcl);
+  pcq_.push(pcl);
 
-  if (pcq.size() >= integration_size) {
+  if (static_cast<int>(pcq_.size()) >= integration_size) {
     // vector of valid points
     std::vector<std::vector<float>> valid_points;
     std::vector<float>              valid_point;
     // iterate through the queue and create a vector of valid points
-    for (const auto& cloudptr : pcq) {
+    for (const auto& cloudptr : pcq_) {
       for (auto& point : cloudptr->points) {
         // ensure the point is not too close to the sensor in x
         if (point.x != 0) {
@@ -64,7 +64,7 @@ void TagDetection::feed_pointcloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr pc
     }
 
     detect_tag(valid_points);
-    pcq.pop();
+    pcq_.pop();
   }
 }
 
@@ -188,8 +188,8 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
 
   for (int i = 0; i < ap_ptr_->detect_num(); i++) {
     auto [this_id, these_vertex] = ap_ptr_->get(i);
-    if (tag_map.find(this_id) != tag_map.end()) {
-      pts_tag = tag_map[this_id];
+    if (tag_map_.find(this_id) != tag_map_.end()) {
+      pts_tag = tag_map_[this_id];
     } else
       continue;
 

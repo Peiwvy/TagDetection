@@ -27,7 +27,7 @@
 
 #include "yaml-cpp/yaml.h"
 
-typedef pcl::PointXYZ PointType;
+using PointType = pcl::PointXYZ;
 
 // c++ queue for holding pointclouds based on integration size
 template <typename T, typename Container = std::deque<T>> class IterableQueue : public std::queue<T, Container> {
@@ -90,21 +90,20 @@ class TagDetection {
   /*      submodule  class                */
   /****************************************/
 
-  IterableQueue<pcl::PointCloud<pcl::PointXYZI>::Ptr> pcq;
+  IterableQueue<pcl::PointCloud<pcl::PointXYZI>::Ptr> pcq_;
 
   std::unique_ptr<ApriltagManager> ap_ptr_;
 
-  std::unordered_map<int, std::vector<cv::Point3f>> tag_map;
+  std::unordered_map<int, std::vector<cv::Point3f>> tag_map_;
 
   // alogrithm parameters
-  std::string lidar_topic;
-  int         integration_size = 20;
-  float       angular_resolution_x_deg;
-  float       angular_resolution_y_deg;
-  float       max_angular_width_deg;
-  float       max_angular_height_deg;
-  double      image_threshold;
-  bool        add_blur;
+  int    integration_size = 20;
+  float  angular_resolution_x_deg;
+  float  angular_resolution_y_deg;
+  float  max_angular_width_deg;
+  float  max_angular_height_deg;
+  double image_threshold;
+  bool   add_blur;
 
  public:
   std::vector<cv::Point3f> pts_ob_glo;

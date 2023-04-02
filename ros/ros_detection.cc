@@ -38,28 +38,28 @@ void lidar_cb(const sensor_msgs::PointCloud2& cloud_msg) {
   app->feed_pointcloud(cloud);
 }
 
-void publish_pose(const ros::Publisher& pub, cv::Mat r, cv::Mat t) {
-  geometry_msgs::PoseStamped pose_stamped;
-  pose_stamped.header.frame_id = "livox_frame";
-  pose_stamped.header.stamp    = ros::Time::now();
+// void publish_pose(const ros::Publisher& pub, cv::Mat r, cv::Mat t) {
+//   geometry_msgs::PoseStamped pose_stamped;
+//   pose_stamped.header.frame_id = "livox_frame";
+//   pose_stamped.header.stamp    = ros::Time::now();
 
-  pose_stamped.pose.position.x = t.at<double>(0, 0);
-  pose_stamped.pose.position.y = t.at<double>(0, 1);
-  pose_stamped.pose.position.z = t.at<double>(0, 2);
-  // TODO bug fix
-  // Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>> eigen_R_new(r.ptr<double>(), r.rows, r.cols);
+//   pose_stamped.pose.position.x = t.at<double>(0, 0);
+//   pose_stamped.pose.position.y = t.at<double>(0, 1);
+//   pose_stamped.pose.position.z = t.at<double>(0, 2);
+//   // TODO bug fix
+//   Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>> eigen_R_new(r.ptr<double>(), r.rows, r.cols);
 
-  // Eigen::Quaterniond pose_rotation_new = Eigen::Quaterniond(eigen_R_new);
-  // pose_rotation_new.normalize();
-  Eigen::Quaterniond pose_rotation_new;
-  pose_stamped.pose.orientation.x = pose_rotation_new.x();
-  pose_stamped.pose.orientation.y = pose_rotation_new.y();
-  pose_stamped.pose.orientation.z = pose_rotation_new.z();
-  pose_stamped.pose.orientation.w = pose_rotation_new.w();
+//   Eigen::Quaterniond pose_rotation_new = Eigen::Quaterniond(eigen_R_new);
+//   pose_rotation_new.normalize();
 
-  // publish the pose
-  pub.publish(pose_stamped);
-}
+//   pose_stamped.pose.orientation.x = pose_rotation_new.x();
+//   pose_stamped.pose.orientation.y = pose_rotation_new.y();
+//   pose_stamped.pose.orientation.z = pose_rotation_new.z();
+//   pose_stamped.pose.orientation.w = pose_rotation_new.w();
+
+//   // publish the pose
+//   pub.publish(pose_stamped);
+// }
 
 void publish_tag_line(const ros::Publisher& pub, double x, double y, double z) {
   visualization_msgs::Marker marker;
@@ -191,7 +191,7 @@ int main(int argc, char* argv[]) {
   auto iilfm_pose_pub        = nh.advertise<geometry_msgs::PoseStamped>("/iilfm/pose", 10);
   auto iilfm_feature_pub     = nh.advertise<sensor_msgs::PointCloud2>("/iilfm/features", 10);
   auto iilfm_gray_pub        = nh.advertise<sensor_msgs::Image>("/iilfm/gray_image", 10);
-  auto iilfm_otigin2pose_pub = nh.advertise<visualization_msgs::Marker>("visualization_marker", 10);
+  auto iilfm_otigin2pose_pub = nh.advertise<visualization_msgs::Marker>("/visualization_marker", 10);
 
   /****************************************/
   /*            configure bag             */
@@ -231,7 +231,8 @@ int main(int argc, char* argv[]) {
       publish_tag_line(
         iilfm_otigin2pose_pub, app->this_outcome.T.at<double>(0, 0), app->this_outcome.T.at<double>(0, 1), app->this_outcome.T.at<double>(0, 2));
       publish_tag_cloud(iilfm_feature_pub, app->this_outcome.pts_tag);
-
+      publish_image(iilfm_gray_pub, app->this_outcome.gray);
+      // publish_pose(iilfm_pose_pub, app->this_outcome.R, app->this_outcome.T);
       app->this_outcome.update = false;
     }
   }
