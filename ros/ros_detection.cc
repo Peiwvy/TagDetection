@@ -227,11 +227,12 @@ int main(int argc, char* argv[]) {
     // publish_pose(R, t);
     // publish_tag_line(t.at<double>(0, 0), t.at<double>(0, 1), t.at<double>(0, 2));
     // publish_image();
-    if (app->count) {
-      publish_tag_line(iilfm_otigin2pose_pub, app->T_glo.at<double>(0, 0), app->T_glo.at<double>(0, 1), app->T_glo.at<double>(0, 2));
+    if (app->this_outcome.update) {
+      publish_tag_line(
+        iilfm_otigin2pose_pub, app->this_outcome.T.at<double>(0, 0), app->this_outcome.T.at<double>(0, 1), app->this_outcome.T.at<double>(0, 2));
+      publish_tag_cloud(iilfm_feature_pub, app->this_outcome.pts_tag);
 
-      publish_tag_cloud(iilfm_feature_pub, app->pts_ob_glo);
-      // publish_pose(iilfm_pose_pub, app->R_glo, app->T_glo);
+      app->this_outcome.update = false;
     }
   }
 

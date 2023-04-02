@@ -1,5 +1,7 @@
 #pragma once
 
+#include "apriltag_manager.h"
+
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -23,16 +25,15 @@
 #include <pcl/visualization/common/float_image_utils.h>
 #include <pcl/visualization/pcl_visualizer.h>
 
-#include "apriltag_manager.h"
 #include "yaml-cpp/yaml.h"
 
 typedef pcl::PointXYZ PointType;
 
 // c++ queue for holding pointclouds based on integration size
-template <typename T, typename Container = std::deque<T>> class iterable_queue : public std::queue<T, Container> {
+template <typename T, typename Container = std::deque<T>> class IterableQueue : public std::queue<T, Container> {
  public:
-  typedef typename Container::iterator       iterator;
-  typedef typename Container::const_iterator const_iterator;
+  using iterator       = typename Container::iterator;
+  using const_iterator = typename Container::const_iterator;
 
   iterator begin() {
     return this->c.begin();
@@ -40,10 +41,10 @@ template <typename T, typename Container = std::deque<T>> class iterable_queue :
   iterator end() {
     return this->c.end();
   }
-  const_iterator begin() const {
+  [[nodiscard]] const_iterator begin() const {
     return this->c.begin();
   }
-  const_iterator end() const {
+  [[nodiscard]] const_iterator end() const {
     return this->c.end();
   }
 };
@@ -57,6 +58,8 @@ struct Outcome {
 
   std::vector<cv::Point3f> pts_ob;
   std::vector<cv::Point3f> pts_tag;
+
+  bool update = false;
 };
 
 class TagDetection {
@@ -87,7 +90,7 @@ class TagDetection {
   /*      submodule  class                */
   /****************************************/
 
-  iterable_queue<pcl::PointCloud<pcl::PointXYZI>::Ptr> pcq;
+  IterableQueue<pcl::PointCloud<pcl::PointXYZI>::Ptr> pcq;
 
   std::unique_ptr<ApriltagManager> ap_ptr_;
 
@@ -104,15 +107,10 @@ class TagDetection {
   bool        add_blur;
 
  public:
-  cv::Mat R_glo;
-  cv::Mat T_glo;
-
-  bool    count = false;
-  cv::Mat gray_glo;
-
   std::vector<cv::Point3f> pts_ob_glo;
   std::vector<cv::Point3f> pts_tag_glo;
 
-  std::optional<Outcome> this_outcome;
+  Outcome this_outcome;
+
   // outpu
 };

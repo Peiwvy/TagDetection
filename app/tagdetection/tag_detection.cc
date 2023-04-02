@@ -180,7 +180,6 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
     cv::GaussianBlur(gray, gray, cv::Size(3, 3), 25, 0, 4);
   }
 
-  gray_glo = gray;
   ap_ptr_->apriltag_detector_detect(gray);
 
   // go over the detections to get pts_ob
@@ -229,8 +228,6 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
         pts_ob.emplace_back(range_pt_ap.x, range_pt_ap.y, range_pt_ap.z);
       }
     }
-    pts_ob_glo  = pts_ob;
-    pts_tag_glo = pts_tag;
   }
 
   // 如何检测到，则计算相对姿态
@@ -239,19 +236,13 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
     cv::Mat t(3, 1, CV_32FC1);
     pose_estimation_3d3d(pts_ob, pts_tag, r, t);  // t,r: ob 在 tag下 坐标
 
-    r.copyTo(R_glo);
-    t.copyTo(T_glo);
-
-    // this_outcome->R = r;
-    // this_outcome->T = t;
-
-    // this_outcome->pts_ob  = pts_ob;
-    // this_outcome->pts_tag = pts_tag;
-
-    // // this_outcome->gray = gray;
-    // this_outcome->id = 0;
-
-    count = true;
+    this_outcome.R       = r;
+    this_outcome.T       = t;
+    this_outcome.pts_ob  = pts_ob;
+    this_outcome.pts_tag = pts_tag;
+    this_outcome.gray    = gray;
+    this_outcome.id      = 0;
+    this_outcome.update  = true;
   }
 }
 
