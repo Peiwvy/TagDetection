@@ -41,6 +41,8 @@ TagDetection::TagDetection(const std::string& config_file) {
 
   ap_ptr_ = std::make_unique<ApriltagManager>();
   ap_ptr_->create_tag_detector(tag_family, tag_decimate, tag_blur, tag_threads, tag_debug, tag_refine_edges);
+  this_outcome.pts_tag.reset(new pcl::PointCloud<pcl::PointXYZ>);
+  this_outcome.pts_ob.reset(new pcl::PointCloud<pcl::PointXYZ>);
 }
 
 void TagDetection::feed_pointcloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr pcl) {
@@ -236,13 +238,23 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
     cv::Mat t(3, 1, CV_32FC1);
     pose_estimation_3d3d(pts_ob, pts_tag, r, t);  // t,r: ob 在 tag下 坐标
 
-    this_outcome.R       = r;
-    this_outcome.T       = t;
-    this_outcome.pts_ob  = pts_ob;
-    this_outcome.pts_tag = pts_tag;
-    this_outcome.gray    = gray;
-    this_outcome.id      = 0;
-    this_outcome.update  = true;
+    this_outcome.R = r;
+    this_outcome.T = t;
+
+    vector_to_pcl(pts_ob, this_outcome.pts_ob);
+    vector_to_pcl(pts_tag, this_outcome.pts_tag);
+    this_outcome.gray   = gray;
+    this_outcome.id     = 0;
+    this_outcome.update = true;
+  }
+}
+void TagDetection::vector_to_pcl(const std::vector<cv::Point3f>& pts, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) {
+  cloud->clear();
+  cloud->width  = pts.size();
+  cloud->height = 1;
+  cloud->points.resize(cloud->width * cloud->height);
+  for (size_t i = 0; i < pts.size(); ++i) {
+    cloud->points[i] = pcl::PointXYZ(pts[i].x, pts[i].y, pts[i].z);
   }
 }
 
@@ -285,10 +297,4 @@ void TagDetection::pose_estimation_3d3d(const std::vector<cv::Point3f>& pts1, co
   // convert to cv::Mat
   R = (cv::Mat_<double>(3, 3) << r(0, 0), r(0, 1), r(0, 2), r(1, 0), r(1, 1), r(1, 2), r(2, 0), r(2, 1), r(2, 2));
   T = (cv::Mat_<double>(3, 1) << t(0, 0), t(1, 0), t(2, 0));
-}
-
-Eigen::Quaterniond TagDetection::rotation_to_quaternion(Eigen::Matrix3d R) {
-  auto q = Eigen::Quaterniond(R);
-  q.normalize();
-  return q;
 }

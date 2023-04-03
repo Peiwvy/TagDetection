@@ -56,8 +56,8 @@ struct Outcome {
   cv::Mat R;
   cv::Mat T;
 
-  std::vector<cv::Point3f> pts_ob;
-  std::vector<cv::Point3f> pts_tag;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pts_ob;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pts_tag;
 
   bool update = false;
 };
@@ -75,10 +75,9 @@ class TagDetection {
   /****************************************/
   /*        main process function         */
   /****************************************/
-  void               process();
-  void               detect_tag(const std::vector<std::vector<float>>& points);
-  void               pose_estimation_3d3d(const std::vector<cv::Point3f>&, const std::vector<cv::Point3f>&, cv::Mat&, cv::Mat&);
-  Eigen::Quaterniond rotation_to_quaternion(Eigen::Matrix3d);
+  void process();
+  void detect_tag(const std::vector<std::vector<float>>& points);
+  void pose_estimation_3d3d(const std::vector<cv::Point3f>&, const std::vector<cv::Point3f>&, cv::Mat&, cv::Mat&);
 
  private:
   std::mutex pointcloud_ptr_mtx_;
@@ -105,11 +104,8 @@ class TagDetection {
   double image_threshold;
   bool   add_blur;
 
+  void vector_to_pcl(const std::vector<cv::Point3f>& pts, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud);
+
  public:
-  std::vector<cv::Point3f> pts_ob_glo;
-  std::vector<cv::Point3f> pts_tag_glo;
-
   Outcome this_outcome;
-
-  // outpu
 };

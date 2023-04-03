@@ -1,19 +1,21 @@
 // app
 #include "tag_detection.h"
 
+#include "tools/rosbag.h"
+
 #include "reflcpp/core.hpp"
 #include "reflcpp/yaml.hpp"
 
-#include "tools/rosbag.h"
-
 // ros
 #include <cv_bridge/cv_bridge.h>
-#include <geometry_msgs/PoseStamped.h>
 #include <pcl_ros/point_cloud.h>
-#include <ros/callback_queue.h>
-#include <ros/ros.h>
+
+#include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <visualization_msgs/Marker.h>
+
+#include <ros/callback_queue.h>
+#include <ros/ros.h>
 
 // standard c++
 #include <filesystem>
@@ -105,28 +107,10 @@ void publish_tag_line(const ros::Publisher& pub, double x, double y, double z) {
   pub.publish(marker);
 }
 
-void publish_tag_cloud(const ros::Publisher& pub, std::vector<cv::Point3f> feature_points) {
+void publish_tag_cloud(const ros::Publisher& pub, const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) {
+
   sensor_msgs::PointCloud2 pc_out;
-
-  pcl::PointCloud<pcl::PointXYZ>::Ptr features(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::PointCloud<pcl::PointXYZ>&     feature_cloud = *features;
-  pcl::PCLPointCloud2                 pc2;
-
-  feature_cloud.width    = feature_points.size();
-  feature_cloud.height   = 1;
-  feature_cloud.is_dense = false;
-  feature_cloud.points.resize(feature_cloud.width * feature_cloud.height);
-
-  for (size_t p = 0; p < feature_points.size(); ++p) {
-    pcl::PointXYZ point;
-    feature_cloud.points[p].x = feature_points[p].x;
-    feature_cloud.points[p].y = feature_points[p].y;
-    feature_cloud.points[p].z = feature_points[p].z;
-    // point.intensity = int(255);
-  }
-
-  pcl::toPCLPointCloud2(feature_cloud, pc2);
-  pcl_conversions::fromPCL(pc2, pc_out);
+  pcl::toROSMsg(*cloud, pc_out);
 
   pc_out.header.frame_id = "livox_frame";
   pc_out.header.stamp    = ros::Time::now();
@@ -134,7 +118,7 @@ void publish_tag_cloud(const ros::Publisher& pub, std::vector<cv::Point3f> featu
   pub.publish(pc_out);
 }
 
-void publish_image(const ros::Publisher& pub, cv::Mat& image) {
+void publish_image(const ros::Publisher& pub, const cv::Mat& image) {
   sensor_msgs::ImagePtr image_msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", image).toImageMsg();
   image_msg->header.frame_id      = "livox_frame";
   image_msg->header.stamp         = ros::Time::now();
@@ -171,7 +155,6 @@ int main(int argc, char* argv[]) {
   //   return -1;
   // }
   // std::string config_file = argv[1];
-
   std::string config_file = "/home/ztyu/Desktop/TagDetection/config/ros_configs.yaml";
 
   ROS_INFO_STREAM("configuring from " << config_file);
@@ -190,7 +173,8 @@ int main(int argc, char* argv[]) {
   ros::init(argc, argv, "ros_example");
   ros::NodeHandle nh;
 
-  auto lidar_sub             = nh.subscribe(prog_cfg.lidar_topic, 5, lidar_cb);
+  auto lidar_sub = nh.subscribe(prog_cfg.lidar_topic, 5, lidar_cb);
+
   auto iilfm_pose_pub        = nh.advertise<geometry_msgs::PoseStamped>("/iilfm/pose", 10);
   auto iilfm_feature_pub     = nh.advertise<sensor_msgs::PointCloud2>("/iilfm/features", 10);
   auto iilfm_gray_pub        = nh.advertise<sensor_msgs::Image>("/iilfm/gray_image", 10);
