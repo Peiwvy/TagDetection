@@ -6,6 +6,7 @@
 #include "reflcpp/core.hpp"
 #include "reflcpp/yaml.hpp"
 
+#include "timer.h"
 // ros
 #include <cv_bridge/cv_bridge.h>
 #include <pcl_ros/point_cloud.h>
@@ -136,8 +137,10 @@ struct ProgramConfigs {
   std::string app_config;
   // rostopic
   std::string lidar_topic;
+  // log
+  std::string log_file;
 };
-REFLCPP_METAINFO(ProgramConfigs, , (bag_file)(bag_rate)(app_config)(lidar_topic))
+REFLCPP_METAINFO(ProgramConfigs, , (bag_file)(bag_rate)(app_config)(lidar_topic)(log_file))
 REFLCPP_YAML(ProgramConfigs)
 
 void as_absolute_path(std::string& path, const std::string& prefix) {
@@ -162,6 +165,7 @@ int main(int argc, char* argv[]) {
   auto prefix_path = fs::path(config_file).parent_path();
   as_absolute_path(prog_cfg.bag_file, prefix_path);
   as_absolute_path(prog_cfg.app_config, prefix_path);
+  as_absolute_path(prog_cfg.log_file, prefix_path);
   /****************************************/
   /*            configure app             */
   /****************************************/
@@ -223,6 +227,8 @@ int main(int argc, char* argv[]) {
   /****************************************/
   /*    (optional): some post process     */
   /****************************************/
+  Timer::PrintAll();
+  Timer::DumpIntoFile(prog_cfg.log_file);
 
   return 0;
 }

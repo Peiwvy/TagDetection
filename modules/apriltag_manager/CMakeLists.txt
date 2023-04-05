@@ -15,8 +15,9 @@ add_library(ApriltagManager STATIC
             apriltag_manager.cc
   )
 add_library(modules::ApriltagManager ALIAS ApriltagManager)
-target_include_directories(ApriltagManager PUBLIC apriltag)
-target_include_directories(ApriltagManager PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(
+  ApriltagManager PUBLIC apriltag ${CMAKE_CURRENT_SOURCE_DIR}
+  )
 # include_directories(${HEADER_FILES} ${OpenCV_INCLUDE_DIRS})
 # include_directories("./src")
 

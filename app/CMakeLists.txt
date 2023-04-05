@@ -28,6 +28,7 @@ target_include_directories(
 target_link_libraries(
   tag_detection
   modules::ApriltagManager
+  timer::timer
   ${PCL_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
   ${OpenCV_LIBS}

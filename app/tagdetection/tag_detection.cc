@@ -1,5 +1,6 @@
 #include "tag_detection.h"
 
+#include "timer.h"
 #include <cmath>
 
 TagDetection::TagDetection(const std::string& config_file) {
@@ -54,18 +55,24 @@ void TagDetection::feed_pointcloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr pc
     // vector of valid points
     std::vector<std::vector<float>> valid_points;
     std::vector<float>              valid_point;
-    // iterate through the queue and create a vector of valid points
-    for (const auto& cloudptr : pcq_) {
-      for (auto& point : cloudptr->points) {
-        // ensure the point is not too close to the sensor in x
-        if (point.x != 0) {
-          valid_point = {point.x, point.y, point.z, point.intensity};
-          valid_points.push_back(valid_point);
-        }
-      }
-    }
 
-    detect_tag(valid_points);
+    Timer::Evaluate(
+      [&, this]() {
+        for (const auto& cloudptr : pcq_) {
+          for (auto& point : cloudptr->points) {
+            // ensure the point is not too close to the sensor in x
+            if (point.x != 0) {
+              valid_point = {point.x, point.y, point.z, point.intensity};
+              valid_points.push_back(valid_point);
+            }
+          }
+        }
+      },
+      "feed_pointcloud");
+    // iterate through the queue and create a vector of valid points
+
+    Timer::Evaluate([&, this]() { detect_tag(valid_points); }, "detect_tag");
+
     pcq_.pop();
   }
 }
