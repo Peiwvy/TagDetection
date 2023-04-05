@@ -1,7 +1,9 @@
 #pragma once
 
-#include "common/reflect.h"
-
+#include "reflcpp/core.hpp"
+#include "reflcpp/serialization.hpp"
+#include "reflcpp/yaml.hpp"
+#include "reflcpp/runtime.hpp"
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -24,4 +26,4 @@ struct GNSS {
 
 }  // namespace datatype
 
-STRUCT_INFO(datatype::GNSS, , (time)(longitude)(latitude)(altitude)(status)(service)(local_E)(local_N)(local_U))
+REFLCPP_METAINFO(datatype::GNSS, , (time)(longitude)(latitude)(altitude)(status)(service)(local_E)(local_N)(local_U))

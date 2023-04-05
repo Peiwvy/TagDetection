@@ -29,6 +29,7 @@ target_link_libraries(
   tag_detection
   modules::ApriltagManager
   timer::timer
+  common::datatype
   ${PCL_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
   ${OpenCV_LIBS}

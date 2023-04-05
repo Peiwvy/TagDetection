@@ -1,6 +1,7 @@
 #pragma once
 
 #include "apriltag_manager.h"
+#include "common/datatype/pose.h"
 
 #include <memory>
 #include <mutex>
@@ -108,4 +109,6 @@ class TagDetection {
 
  public:
   Outcome this_outcome;
+
+  datatype::Pose thispose;
 };

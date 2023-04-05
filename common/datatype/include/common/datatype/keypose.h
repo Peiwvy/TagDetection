@@ -1,6 +1,9 @@
 #pragma once
 
-#include "common/reflect.h"
+#include "reflcpp/core.hpp"
+#include "reflcpp/serialization.hpp"
+#include "reflcpp/yaml.hpp"
+#include "reflcpp/runtime.hpp"
 
 #include "pose.h"
 
@@ -19,4 +22,4 @@ struct KeyPose : Pose {
 
 }  // namespace datatype
 
-STRUCT_INFO(datatype::KeyPose, (datatype::Pose), (time)(index))
+REFLCPP_METAINFO(datatype::KeyPose, (datatype::Pose), (time)(index))

@@ -1,6 +1,9 @@
 #pragma once
 
-#include "common/reflect.h"
+#include "reflcpp/core.hpp"
+#include "reflcpp/serialization.hpp"
+#include "reflcpp/yaml.hpp"
+#include "reflcpp/runtime.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -19,4 +22,4 @@ struct IMU {
 
 }  // namespace datatype
 
-STRUCT_INFO(datatype::IMU, , (time)(acc)(gyr)(rot))
+REFLCPP_METAINFO(datatype::IMU, , (time)(acc)(gyr)(rot))

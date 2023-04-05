@@ -1,6 +1,9 @@
 #pragma once
 
-#include "common/reflect/stream.h"
+#include "reflcpp/core.hpp"
+#include "reflcpp/serialization.hpp"
+#include "reflcpp/yaml.hpp"
+#include "reflcpp/runtime.hpp"
 
 #include <fstream>
 #include <numeric>

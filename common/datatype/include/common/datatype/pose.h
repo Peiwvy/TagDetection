@@ -1,6 +1,9 @@
 #pragma once
 
-#include "common/reflect.h"
+#include "reflcpp/core.hpp"
+#include "reflcpp/serialization.hpp"
+#include "reflcpp/yaml.hpp"
+#include "reflcpp/runtime.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -17,4 +20,4 @@ struct Pose {
 
 }  // namespace datatype
 
-STRUCT_INFO(datatype::Pose, , (trans)(rot))
+REFLCPP_METAINFO(datatype::Pose, , (trans)(rot))

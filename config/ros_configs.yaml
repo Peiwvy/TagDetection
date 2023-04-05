@@ -3,5 +3,5 @@ bag_file: ""
 bag_rate: 1.0
 app_config: app_configs.yaml
 lidar_topic: /driver/livox/point_cloud
-log_file: ../timer_log.log
+log_file: ../log/timer_log.log
 #  /livox/lidar
