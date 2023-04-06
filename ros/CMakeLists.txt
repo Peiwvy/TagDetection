@@ -39,30 +39,17 @@ link_libraries(${catkin_LIBRARIES})
 # ##############################################################################
 add_library(ros_tools tools/rosbag.cc)
 target_include_directories(ros_tools PRIVATE ${catkin_INCLUDE_DIRS})
-target_link_libraries(ros_tools PRIVATE)
 
 # ##############################################################################
 # Build program
 # ##############################################################################
-add_executable(ros_example ros_example.cc)
-target_include_directories(
-  ros_example PRIVATE ${catkin_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIR}
-  )
-target_link_libraries(
-  ros_example
-  PRIVATE ros_tools
-          app::example
-          reflcpp::reflcpp
-          ${YAML_CPP_LIBRARIES}
-  )
+# eigen ### find_package(Eigen3 3.3 REQUIRED)
+# include_directories(${EIGEN3_INCLUDE_DIR})
 
 add_executable(ros_detection ros_detection.cc)
 target_include_directories(
   ros_detection PRIVATE ${catkin_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIR}
   )
-# eigen ###
-find_package(Eigen3 3.3 REQUIRED)
-include_directories(${EIGEN3_INCLUDE_DIR})
 target_link_libraries(
   ros_detection
   PRIVATE ros_tools

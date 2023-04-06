@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 find_package(Glog REQUIRED)
 
 add_library(timer STATIC timer.cc)
-add_library(timer::timer ALIAS timer)
+add_library(common::timer ALIAS timer)
 target_include_directories(timer INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(timer glog)
 

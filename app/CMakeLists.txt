@@ -1,9 +1,3 @@
-add_library(app_example example/app_example.cc)
-add_library(app::example ALIAS app_example)
-
-target_include_directories(app_example PUBLIC example)
-target_link_libraries(app_example modules::example)
-
 find_package(PCL REQUIRED)
 include_directories(${PCL_INCLUDE_DIRS})
 
@@ -28,7 +22,7 @@ target_include_directories(
 target_link_libraries(
   tag_detection
   modules::ApriltagManager
-  timer::timer
+  common::timer
   common::datatype
   ${PCL_LIBRARIES}
   ${YAML_CPP_LIBRARIES}

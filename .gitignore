@@ -51,3 +51,5 @@ OUTPUT/*
 compile_commands.json
 
 .vscode
+*.log
+*.bag
