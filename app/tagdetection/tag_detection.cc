@@ -80,33 +80,25 @@ void TagDetection::feed_pointcloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr pc
 void TagDetection::process() {}
 
 void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
+  // create empty point clouds to fill with the valid points and valid points with intensity.
+  pcl::PointCloud<pcl::PointXYZ>::Ptr valid_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+  valid_cloud->resize(points.size());
+  pcl::PointCloud<pcl::PointXYZI>::Ptr valid_cloud_i(new pcl::PointCloud<pcl::PointXYZI>);
+  valid_cloud_i->resize(points.size());
 
-  // create an empty pointcloud to fill witht the valid points, and valid points
-  // with intensity
-  pcl::PointCloud<pcl::PointXYZ> valid_cloud;
-  valid_cloud.width    = points.size();
-  valid_cloud.height   = 1;
-  valid_cloud.is_dense = false;
-  valid_cloud.points.resize(valid_cloud.width * valid_cloud.height);
+  // fill the point clouds with valid points.
+  std::transform(points.begin(), points.end(), valid_cloud->begin(), [](const auto& p) { return pcl::PointXYZ{p[0], p[1], p[2]}; });
 
-  pcl::PointCloud<pcl::PointXYZ> valid_cloud_i;
-  valid_cloud_i.width    = points.size();
-  valid_cloud_i.height   = 1;
-  valid_cloud_i.is_dense = false;
-  valid_cloud_i.points.resize(valid_cloud_i.width * valid_cloud_i.height);
+  std::transform(points.begin(), points.end(), valid_cloud_i->begin(), [](const auto& p) {
+    pcl::PointXYZI pt;
+    pt.x         = (p[3] != 0) ? p[0] * p[3] : p[0];
+    pt.y         = (p[3] != 0) ? p[1] * p[3] : p[1];
+    pt.z         = (p[3] != 0) ? p[2] * p[3] : p[2];
+    pt.intensity = p[3];
+    return pt;
+  });
 
-  // write the valid points to the new pointcloud
-  for (size_t p = 0; p < points.size(); ++p) {
-    valid_cloud.points[p].x = points[p][0];
-    valid_cloud.points[p].y = points[p][1];
-    valid_cloud.points[p].z = points[p][2];
-
-    valid_cloud_i.points[p].x = (points[p][3] != 0) ? points[p][0] * points[p][3] : points[p][0];
-    valid_cloud_i.points[p].y = (points[p][3] != 0) ? points[p][1] * points[p][3] : points[p][1];
-    valid_cloud_i.points[p].z = (points[p][3] != 0) ? points[p][2] * points[p][3] : points[p][2];
-  }
-
-  // initialize the range images
+  // initialize the range images.
   float noise_level = 0.0;
   float min_range   = 0.0f;
   int   border_size = 1;
@@ -125,7 +117,7 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
 
   pcl::RangeImage::CoordinateFrame coordinate_frame = pcl::RangeImage::LASER_FRAME;
 
-  range_image.createFromPointCloud(valid_cloud,
+  range_image.createFromPointCloud(*valid_cloud,
                                    angular_resolution_x,
                                    angular_resolution_y,
                                    max_angular_width,
@@ -136,7 +128,7 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
                                    min_range,
                                    border_size);
 
-  range_image_i.createFromPointCloud(valid_cloud_i,
+  range_image_i.createFromPointCloud(*valid_cloud_i,
                                      angular_resolution_x,
                                      angular_resolution_y,
                                      max_angular_width,
@@ -149,38 +141,17 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
 
   // normalize the intensity, otherwise we cannot transfer it into CV Mat
   // notice: return a pointer to a new float array containing the range values
-  float* ranges = range_image_i.getRangesArray();  // this will get the intensity values
+  cv::Mat image;
+  range_image_i.setUnseenToMaxRange();
 
-  float max = -FLT_MAX;
-  for (int i = 0, n = range_image_i.width * range_image_i.height; i < n; ++i) {
-    float val = *(ranges + i);
-    if (val >= -FLT_MAX && val <= FLT_MAX) {
-      max = std::max(max, val);
-    }
-  }
+  cv::Mat rgb(range_image_i.height,
+              range_image_i.width,
+              CV_8UC3,
+              pcl::visualization::FloatImageUtils::getVisualImage(range_image_i.getRangesArray(), range_image_i.width, range_image_i.height));
+  // cv::Mat rgb = pcl::visualization::FloatImageUtils::getVisualImage(range_image_i.getRangesArray(), range_image_i.width, range_image_i.height);
+  cv::cvtColor(rgb, image, cv::COLOR_RGB2BGR);
 
-  // Create cv::Mat
-  cv::Mat       image(range_image_i.height, range_image_i.width, CV_8UC4);
-  unsigned char r, g, b;
-
-// pcl::PointCloud to cv::Mat
-#pragma omp parallel for
-  for (int y = 0; y < range_image_i.height; y++) {
-    for (int x = 0; x < range_image_i.width; x++) {
-      pcl::PointWithRange range_pt = range_image_i.getPoint(x, y);
-      // normalize
-      float value = range_pt.range / max;
-      // Get RGB color values for a given float in [0, 1]
-      pcl::visualization::FloatImageUtils::getColorForFloat(value, r, g, b);
-
-      image.at<cv::Vec4b>(y, x)[0] = b;
-      image.at<cv::Vec4b>(y, x)[1] = g;
-      image.at<cv::Vec4b>(y, x)[2] = r;
-      image.at<cv::Vec4b>(y, x)[3] = 255;
-    }
-  }
-
-  // create greyscale image for detections
+  // convert the CV Mat to a grayscale image for detections.
   cv::Mat gray;
   cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
   cv::threshold(gray, gray, image_threshold, 255, cv::THRESH_BINARY);
@@ -197,20 +168,21 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
 
   for (int i = 0; i < ap_ptr_->detect_num(); i++) {
     auto [this_id, these_vertex] = ap_ptr_->get(i);
-    if (tag_map_.find(this_id) != tag_map_.end()) {
+    if (tag_map_.find(this_id) != tag_map_.end()) {  // if this id is in the tag_map_
       pts_tag = tag_map_[this_id];
-    } else
+    } else {
       continue;
+    }
 
-    for (auto& j : these_vertex) {
-      auto x = j.x;
-      auto y = j.y;
-      // if the vertex is unobserved
+    for (auto& j : these_vertex) {             // for each vertex
+      auto [x, y] = std::make_pair(j.x, j.y);  // get its x and y coordinates.
+
+      // if the vertex is unobserved.
       if (!range_image.isObserved(round(x), round(y))) {
-        // check if there exists a pair of neighbor points that is symmetric to
-        // each other with respect to the unobserved point
+        // check if there exists a pair of neighbor points that is symmetric to each other with
+        // respect to the unobserved point.
         for (int pixel_gap = 0; pixel_gap < 3; pixel_gap++) {
-          // fix the azimuth
+          // fix the azimuth.
           if (range_image.isObserved(round(x), round(y + pixel_gap))) {
             if (range_image.isObserved(round(x), round(y - pixel_gap))) {
               pcl::PointWithRange point_up;
@@ -227,7 +199,7 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
 
               pts_ob.emplace_back(
                 interpolate(point_up.x, point_down.x), interpolate(point_up.y, point_down.y), interpolate(point_up.z, point_down.z));
-              break;
+              break;  // break out of the inner loop if a pair of neighbor points was found.
             }
           }
         }
@@ -239,11 +211,11 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
     }
   }
 
-  // 如何检测到，则计算相对姿态
+  // if the position of the observed tags is computed, store the result.
   if (!pts_ob.empty()) {
     cv::Mat r(3, 3, CV_32FC1);
     cv::Mat t(3, 1, CV_32FC1);
-    pose_estimation_3d3d(pts_ob, pts_tag, r, t);  // t,r: ob 在 tag下 坐标
+    pose_estimation_3d3d(pts_ob, pts_tag, r, t);
 
     this_outcome.R = r;
     this_outcome.T = t;
