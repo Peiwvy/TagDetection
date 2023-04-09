@@ -38,6 +38,17 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 include(cmake/cmake_tools.cmake)
 enable_testing()
 
+set(CUSTOM_TBB_DIR "/opt/tbb")
+
+if(CUSTOM_TBB_DIR)
+  set(TBB_INCLUDE_DIR "${CUSTOM_TBB_DIR}/include")
+  set(TBB_LIBRARY_DIR "${CUSTOM_TBB_DIR}/lib/intel64/gcc4.8")
+  include_directories(${TBB_INCLUDE_DIR})
+  link_directories(${TBB_LIBRARY_DIR})
+endif()
+
+message(STATUS "Hello, CMake!  ${TBB_INCLUDE_DIR}  ")
+message(STATUS "Hello, CMake!  ${TBB_LIBRARY_DIR}  ")
 # ##############################################################################
 # Source files
 # ##############################################################################

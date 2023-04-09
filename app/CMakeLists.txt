@@ -27,4 +27,5 @@ target_link_libraries(
   ${PCL_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
   ${OpenCV_LIBS}
+  tbb
   )

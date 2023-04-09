@@ -1,7 +1,7 @@
 #include "tag_detection.h"
 #include "timer.h"
 #include <cmath>
-
+#include <execution>
 #include <opencv2/core/eigen.hpp>
 TagDetection::TagDetection(const std::string& config_file) {
   auto conf = YAML::LoadFile(config_file);
@@ -87,9 +87,11 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
   valid_cloud_i->resize(points.size());
 
   // fill the point clouds with valid points.
-  std::transform(points.begin(), points.end(), valid_cloud->begin(), [](const auto& p) { return pcl::PointXYZ{p[0], p[1], p[2]}; });
+  std::transform(std::execution::par, points.begin(), points.end(), valid_cloud->begin(), [](const auto& p) {
+    return pcl::PointXYZ{p[0], p[1], p[2]};
+  });
 
-  std::transform(points.begin(), points.end(), valid_cloud_i->begin(), [](const auto& p) {
+  std::transform(std::execution::par, points.begin(), points.end(), valid_cloud_i->begin(), [](const auto& p) {
     pcl::PointXYZI pt;
     pt.x         = (p[3] != 0) ? p[0] * p[3] : p[0];
     pt.y         = (p[3] != 0) ? p[1] * p[3] : p[1];
