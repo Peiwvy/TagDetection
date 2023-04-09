@@ -1,32 +1,26 @@
 #pragma once
-
+// mylib
 #include "apriltag_manager.h"
 #include "common/datatype/pose.h"
 
-#include <memory>
-#include <mutex>
-#include <optional>
-#include <queue>
-#include <string>
+#include "reflcpp/core.hpp"
+#include "reflcpp/yaml.hpp"
 
-// opencv imports
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/imgproc.hpp"
+#include <opencv2/core/eigen.hpp>
+#include <opencv2/imgproc.hpp>
 
-// pcl imports
-#include <pcl/console/parse.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/io/io.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/io/png_io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/range_image/range_image.h>
 #include <pcl/visualization/common/float_image_utils.h>
 #include <pcl/visualization/pcl_visualizer.h>
 
-#include "yaml-cpp/yaml.h"
+#include <yaml-cpp/yaml.h>
+
+#include <memory>
+#include <mutex>
+#include <queue>
+#include <string>
 
 using PointType = pcl::PointXYZ;
 
@@ -63,7 +57,23 @@ struct Outcome {
   bool update = false;
 };
 
+struct TagDetectionParam {
+  int    integration_size         = 20;
+  float  angular_resolution_x_deg = 0.05;
+  float  angular_resolution_y_deg = 0.05;
+  float  max_angular_width_deg    = 70;
+  float  max_angular_height_deg   = 70;
+  double image_threshold          = 80;
+  bool   add_blur                 = false;
+};
+REFLCPP_METAINFO(
+  TagDetectionParam,
+  ,
+  (integration_size)(angular_resolution_x_deg)(angular_resolution_y_deg)(max_angular_width_deg)(max_angular_height_deg)(image_threshold)(add_blur))
+REFLCPP_YAML(TagDetectionParam)
+
 class TagDetection {
+
  public:
   /****************************************/
   /*      construct from config file      */
@@ -83,27 +93,15 @@ class TagDetection {
  private:
   std::mutex pointcloud_ptr_mtx_;
 
-  std::queue<std::string> rst_queue_;
-  std::mutex              rst_mtx_;
-
   /****************************************/
   /*      submodule  class                */
   /****************************************/
+  TagDetectionParam                tag_detection_param_;
+  std::unique_ptr<ApriltagManager> ap_ptr_;
 
   IterableQueue<pcl::PointCloud<pcl::PointXYZI>::Ptr> pcq_;
 
-  std::unique_ptr<ApriltagManager> ap_ptr_;
-
   std::unordered_map<int, std::vector<cv::Point3f>> tag_map_;
-
-  // alogrithm parameters
-  int    integration_size = 20;
-  float  angular_resolution_x_deg;
-  float  angular_resolution_y_deg;
-  float  max_angular_width_deg;
-  float  max_angular_height_deg;
-  double image_threshold;
-  bool   add_blur;
 
   void vector_to_pcl(const std::vector<cv::Point3f>& pts, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud);
 

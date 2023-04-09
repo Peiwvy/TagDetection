@@ -1,26 +1,23 @@
 #include "tag_detection.h"
+
 #include "timer.h"
+
 #include <cmath>
 #include <execution>
-#include <opencv2/core/eigen.hpp>
+
 TagDetection::TagDetection(const std::string& config_file) {
   auto conf = YAML::LoadFile(config_file);
 
-  integration_size         = conf["integration_size"].as<int>();
-  angular_resolution_x_deg = conf["angular_resolution_x_deg"].as<float>();
-  angular_resolution_y_deg = conf["angular_resolution_y_deg"].as<float>();
-  max_angular_width_deg    = conf["max_angular_width_deg"].as<float>();
-  max_angular_height_deg   = conf["max_angular_height_deg"].as<float>();
-  image_threshold          = conf["image_threshold"].as<double>();
-  add_blur                 = conf["add_blur"].as<bool>();
+  tag_detection_param_ = conf.as<TagDetectionParam>();
 
-  auto tag_family       = conf["tag_family"].as<std::string>();
-  auto tag_decimate     = conf["tag_decimate"].as<double>();
-  auto tag_blur         = conf["tag_blur"].as<double>();
-  auto tag_threads      = conf["tag_threads"].as<int>();
-  auto tag_debug        = conf["tag_debug"].as<bool>();
-  auto tag_refine_edges = conf["tag_refine_edges"].as<bool>();
-
+  conf    = conf["tag_param"];
+  ap_ptr_ = std::make_unique<ApriltagManager>();
+  ap_ptr_->create_tag_detector(conf["tag_family"].as<std::string>(),
+                               conf["tag_decimate"].as<double>(),
+                               conf["tag_blur"].as<double>(),
+                               conf["tag_threads"].as<int>(),
+                               conf["tag_debug"].as<bool>(),
+                               conf["tag_refine_edges"].as<bool>());
   conf = conf["tag_list"];
   for (YAML::const_iterator it = conf.begin(); it != conf.end(); ++it) {
     YAML::Node attributes = it->second;
@@ -40,8 +37,6 @@ TagDetection::TagDetection(const std::string& config_file) {
     tag_map_.insert(std::make_pair(tagid.as<int>(), pts0));
   }
 
-  ap_ptr_ = std::make_unique<ApriltagManager>();
-  ap_ptr_->create_tag_detector(tag_family, tag_decimate, tag_blur, tag_threads, tag_debug, tag_refine_edges);
   this_outcome.pts_tag.reset(new pcl::PointCloud<pcl::PointXYZ>);
   this_outcome.pts_ob.reset(new pcl::PointCloud<pcl::PointXYZ>);
 }
@@ -51,7 +46,7 @@ void TagDetection::feed_pointcloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr pc
 
   pcq_.push(pcl);
 
-  if (static_cast<int>(pcq_.size()) >= integration_size) {
+  if (static_cast<int>(pcq_.size()) >= tag_detection_param_.integration_size) {
     // vector of valid points
     std::vector<std::vector<float>> valid_points;
     std::vector<float>              valid_point;
@@ -111,10 +106,10 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
   pcl::RangeImage::Ptr range_image_i_ptr(new pcl::RangeImage);
   pcl::RangeImage&     range_image_i = *range_image_i_ptr;
 
-  auto            angular_resolution_x = (float)(angular_resolution_x_deg * (M_PI / 180.0f));
-  auto            angular_resolution_y = (float)(angular_resolution_y_deg * (M_PI / 180.0f));
-  auto            max_angular_width    = (float)(max_angular_width_deg * (M_PI / 180.0f));
-  auto            max_angular_height   = (float)(max_angular_height_deg * (M_PI / 180.0f));
+  auto            angular_resolution_x = (float)(tag_detection_param_.angular_resolution_x_deg * (M_PI / 180.0f));
+  auto            angular_resolution_y = (float)(tag_detection_param_.angular_resolution_y_deg * (M_PI / 180.0f));
+  auto            max_angular_width    = (float)(tag_detection_param_.max_angular_width_deg * (M_PI / 180.0f));
+  auto            max_angular_height   = (float)(tag_detection_param_.max_angular_height_deg * (M_PI / 180.0f));
   Eigen::Affine3f sensor_pose          = (Eigen::Affine3f)Eigen::Translation3f(0.0f, 0.0f, 0.0f);
 
   pcl::RangeImage::CoordinateFrame coordinate_frame = pcl::RangeImage::LASER_FRAME;
@@ -154,7 +149,9 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
 
   // Create cv::Mat
   cv::Mat       image(range_image_i.height, range_image_i.width, CV_8UC4);
-  unsigned char r, g, b;
+  unsigned char r = 0;
+  unsigned char g = 0;
+  unsigned char b = 0;
 
   // pcl::PointCloud to cv::Mat
   for (int y = 0; y < range_image_i.height; y++) {
@@ -175,9 +172,9 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
   // convert the CV Mat to a grayscale image for detections.
   cv::Mat gray;
   cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
-  cv::threshold(gray, gray, image_threshold, 255, cv::THRESH_BINARY);
+  cv::threshold(gray, gray, tag_detection_param_.image_threshold, 255, cv::THRESH_BINARY);
 
-  if (add_blur) {
+  if (tag_detection_param_.add_blur) {
     cv::GaussianBlur(gray, gray, cv::Size(3, 3), 25, 0, 4);
   }
 
@@ -259,19 +256,20 @@ void TagDetection::vector_to_pcl(const std::vector<cv::Point3f>& pts, pcl::Point
 }
 
 void TagDetection::pose_estimation_3d3d(const std::vector<cv::Point3f>& pts1, const std::vector<cv::Point3f>& pts2, cv::Mat& R, cv::Mat& T) {
-  const int   N  = static_cast<int>(pts1.size());
+  const int   n  = static_cast<int>(pts1.size());
   cv::Point3f p1 = std::accumulate(pts1.begin(), pts1.end(), cv::Point3f(0.0f));
   cv::Point3f p2 = std::accumulate(pts2.begin(), pts2.end(), cv::Point3f(0.0f));
-  p1             = p1 * (1.0f / N);
-  p2             = p2 * (1.0f / N);
+  p1             = p1 * (1.0f / n);
+  p2             = p2 * (1.0f / n);
 
-  std::vector<cv::Point3f> q1(N), q2(N);
+  std::vector<cv::Point3f> q1(n);
+  std::vector<cv::Point3f> q2(n);
   std::transform(pts1.begin(), pts1.end(), q1.begin(), [&](const auto& p) { return p - p1; });
   std::transform(pts2.begin(), pts2.end(), q2.begin(), [&](const auto& p) { return p - p2; });
 
   // compute q1*q2^T
   Eigen::Matrix3d w = Eigen::Matrix3d::Zero();
-  for (int i = 0; i < N; i++) {
+  for (int i = 0; i < n; i++) {
     w += Eigen::Vector3d(q1[i].x, q1[i].y, q1[i].z) * Eigen::Vector3d(q2[i].x, q2[i].y, q2[i].z).transpose();
   }
 

@@ -43,9 +43,6 @@ target_include_directories(ros_tools PRIVATE ${catkin_INCLUDE_DIRS})
 # ##############################################################################
 # Build program
 # ##############################################################################
-# eigen ### find_package(Eigen3 3.3 REQUIRED)
-# include_directories(${EIGEN3_INCLUDE_DIR})
-
 add_executable(ros_detection ros_detection.cc)
 target_include_directories(
   ros_detection PRIVATE ${catkin_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIR}

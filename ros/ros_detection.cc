@@ -28,14 +28,12 @@ namespace fs = std::filesystem;
 /****************************************/
 /*            user app here             */
 /****************************************/
-// lazy init to avoid unexpected problems
 std::unique_ptr<TagDetection> app;
 
 /****************************************/
 /*            callback here             */
 /*    constptr for better performance   */
 /****************************************/
-
 void lidar_cb(const sensor_msgs::PointCloud2& cloud_msg) {
   pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
   pcl::fromROSMsg(cloud_msg, *cloud);
@@ -63,7 +61,6 @@ void publish_pose(const ros::Publisher& pub, cv::Mat r, cv::Mat t) {
   pose_stamped.pose.orientation.z = pose_rotation_new.z();
   pose_stamped.pose.orientation.w = pose_rotation_new.w();
 
-  // publish the pose
   pub.publish(pose_stamped);
 }
 
@@ -94,12 +91,10 @@ void publish_tag_line(const ros::Publisher& pub, double x, double y, double z) {
   marker.pose.orientation.w = 1.0;
 
   geometry_msgs::Point p;
-  // 机器人位置 ， 激光雷达 原点
   p.x = 0;
   p.y = 0;
   p.z = 0;
   marker.points.push_back(p);
-  // 末端
   p.x = x;
   p.y = y;
   p.z = z;
@@ -109,7 +104,6 @@ void publish_tag_line(const ros::Publisher& pub, double x, double y, double z) {
 }
 
 void publish_tag_cloud(const ros::Publisher& pub, const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) {
-
   sensor_msgs::PointCloud2 pc_out;
   pcl::toROSMsg(*cloud, pc_out);
 
@@ -158,7 +152,7 @@ int main(int argc, char* argv[]) {
   //   return -1;
   // }
   // std::string config_file = argv[1];
-  std::string config_file = "/home/ztyu/Desktop/TagDetection/config/ros_configs.yaml";
+  std::string config_file = "/home/ztyu/Desktop/ws_tagdection/src/TagDetection/config/ros_configs.yaml";
 
   ROS_INFO_STREAM("configuring from " << config_file);
   auto prog_cfg    = YAML::LoadFile(config_file).as<ProgramConfigs>();

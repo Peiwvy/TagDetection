@@ -8,6 +8,7 @@
 # image_threshold: 60
 # add_blur: false
 # mid 70
+
 integration_size: 40
 angular_resolution_x_deg: 0.05
 angular_resolution_y_deg: 0.05
@@ -16,26 +17,26 @@ max_angular_height_deg: 70.0
 image_threshold: 80
 add_blur: false
 
-tag_family: tag16h5
-tag_decimate: 2.0
-tag_blur: 0.0 
-tag_threads: 1
-tag_debug: false
-tag_refine_edges: true
-
-tag_list:
-  tag:
-    id: 2
-    firstvertex: [0,0.05,-0.05]#left-bottom
-    secondvertex: [0,-0.05,-0.05]#right-bottom
-    thirdvertex: [0,-0.05,0.05]
-    fourthvertex: [0,0.05,0.05]
-  tag:
-    id: 1
-    firstvertex: [3.62,-0.13,0.403]#left-bottom
-    secondvertex: [3.62,-0.293,0.403]#right-bottom
-    thirdvertex: [3.62,-0.294,0.567]
-    fourthvertex: [3.62,-0.13,0.567]
+tag_param:
+  tag_family: tag16h5
+  tag_decimate: 2.0
+  tag_blur: 0.0 
+  tag_threads: 1
+  tag_debug: false
+  tag_refine_edges: true
+  tag_list:
+    tag:
+      id: 2
+      firstvertex: [0,0.05,-0.05]#left-bottom
+      secondvertex: [0,-0.05,-0.05]#right-bottom
+      thirdvertex: [0,-0.05,0.05]
+      fourthvertex: [0,0.05,0.05]
+    tag:
+      id: 1
+      firstvertex: [3.62,-0.13,0.403]#left-bottom
+      secondvertex: [3.62,-0.293,0.403]#right-bottom
+      thirdvertex: [3.62,-0.294,0.567]
+      fourthvertex: [3.62,-0.13,0.567]
 
 # tag:
 #   id: 2
