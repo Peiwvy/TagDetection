@@ -1,7 +1,7 @@
-bag_file: ""
-# bag_file: ../ros/ros_example.bag
+bag_file: ../1p5.bag # "../1p5.bag"
 bag_rate: 1.0
+
 app_config: app_configs.yaml
-lidar_topic: /driver/livox/point_cloud
 log_file: ../log/timer_log.log
-#  /livox/lidar
+
+lidar_topic: /driver/livox/point_cloud # /livox/lidar

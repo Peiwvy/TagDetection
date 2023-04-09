@@ -17,7 +17,6 @@
 
 #include <ros/callback_queue.h>
 #include <ros/ros.h>
-
 // standard c++
 #include <filesystem>
 #include <memory>
@@ -40,20 +39,16 @@ void lidar_cb(const sensor_msgs::PointCloud2& cloud_msg) {
   app->feed_pointcloud(cloud);
 }
 
-void publish_pose(const ros::Publisher& pub, cv::Mat r, cv::Mat t) {
+void publish_pose(const ros::Publisher& pub, const Eigen::Matrix3d& r, const Eigen::Vector3d& t) {
   geometry_msgs::PoseStamped pose_stamped;
   pose_stamped.header.frame_id = "livox_frame";
   pose_stamped.header.stamp    = ros::Time::now();
 
-  pose_stamped.pose.position.x = t.at<double>(0, 0);
-  pose_stamped.pose.position.y = t.at<double>(0, 1);
-  pose_stamped.pose.position.z = t.at<double>(0, 2);
+  pose_stamped.pose.position.x = t(0);
+  pose_stamped.pose.position.y = t(1);
+  pose_stamped.pose.position.z = t(2);
 
-  cv::Mat r_new = std::move(r);
-
-  Eigen::Map<Eigen::Matrix<double, 3, 3, Eigen::RowMajor>> eigen_r_new(r_new.ptr<double>());
-
-  auto pose_rotation_new = Eigen::Quaterniond(eigen_r_new);
+  auto pose_rotation_new = Eigen::Quaterniond(r);
   pose_rotation_new.normalize();
 
   pose_stamped.pose.orientation.x = pose_rotation_new.x();
@@ -64,7 +59,7 @@ void publish_pose(const ros::Publisher& pub, cv::Mat r, cv::Mat t) {
   pub.publish(pose_stamped);
 }
 
-void publish_tag_line(const ros::Publisher& pub, double x, double y, double z) {
+void publish_tag_line(const ros::Publisher& pub, const Eigen::Vector3d& t) {
   visualization_msgs::Marker marker;
   marker.header.frame_id = "livox_frame";                           // 坐标系
   marker.header.stamp    = ros::Time::now();                        // 时间戳
@@ -95,9 +90,9 @@ void publish_tag_line(const ros::Publisher& pub, double x, double y, double z) {
   p.y = 0;
   p.z = 0;
   marker.points.push_back(p);
-  p.x = x;
-  p.y = y;
-  p.z = z;
+  p.x = t(0);
+  p.y = t(1);
+  p.z = t(2);
   marker.points.push_back(p);
 
   pub.publish(marker);
@@ -139,7 +134,8 @@ REFLCPP_YAML(ProgramConfigs)
 
 void as_absolute_path(std::string& path, const std::string& prefix) {
   if (!path.empty() && fs::path(path).is_relative()) {
-    path = fs::path(prefix) / path;
+    auto path_temp = fs::path(prefix) / path;
+    path           = path_temp.lexically_normal();
   }
 }
 
@@ -147,14 +143,17 @@ int main(int argc, char* argv[]) {
   /****************************************/
   /*      configure from command line     */
   /****************************************/
-  // if (argc != 2) {
-  //   ROS_FATAL_STREAM("usage: " << argv[0] << " CONFIG_FILE.");
-  //   return -1;
-  // }
-  // std::string config_file = argv[1];
-  std::string config_file = "/home/ztyu/Desktop/ws_tagdection/src/TagDetection/config/ros_configs.yaml";
-
+  std::string config_file;
+  if (argc == 1) {
+    config_file = fs::path(WORK_SPACE_PATH) / "config/ros_configs.yaml";
+  } else if (argc == 2) {
+    config_file = argv[1];
+  } else {
+    ROS_FATAL_STREAM("usage: " << argv[0] << " CONFIG_FILE.");
+    return -1;
+  }
   ROS_INFO_STREAM("configuring from " << config_file);
+
   auto prog_cfg    = YAML::LoadFile(config_file).as<ProgramConfigs>();
   auto prefix_path = fs::path(config_file).parent_path();
   as_absolute_path(prog_cfg.bag_file, prefix_path);
@@ -209,8 +208,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (app->this_outcome.update) {
-      publish_tag_line(
-        iilfm_otigin2pose_pub, app->this_outcome.T.at<double>(0, 0), app->this_outcome.T.at<double>(0, 1), app->this_outcome.T.at<double>(0, 2));
+      publish_tag_line(iilfm_otigin2pose_pub, app->this_outcome.T);
       publish_tag_cloud(iilfm_feature_pub, app->this_outcome.pts_tag);
       publish_image(iilfm_gray_pub, app->this_outcome.gray);
       publish_pose(iilfm_pose_pub, app->this_outcome.R, app->this_outcome.T);

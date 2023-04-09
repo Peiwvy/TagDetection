@@ -3,6 +3,7 @@
 #include "timer.h"
 
 #include <cmath>
+#include <cstddef>
 #include <execution>
 
 TagDetection::TagDetection(const std::string& config_file) {
@@ -148,14 +149,14 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
   }
 
   // Create cv::Mat
-  cv::Mat       image(range_image_i.height, range_image_i.width, CV_8UC4);
+  cv::Mat       image(static_cast<int>(range_image_i.height), static_cast<int>(range_image_i.width), CV_8UC4);
   unsigned char r = 0;
   unsigned char g = 0;
   unsigned char b = 0;
 
   // pcl::PointCloud to cv::Mat
-  for (int y = 0; y < range_image_i.height; y++) {
-    for (int x = 0; x < range_image_i.width; x++) {
+  for (auto y = 0; y < image.rows; y++) {
+    for (auto x = 0; x < image.cols; x++) {
       pcl::PointWithRange range_pt = range_image_i.getPoint(x, y);
       // normalize
       float value = range_pt.range / max;
@@ -184,7 +185,7 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
   std::vector<cv::Point3f> pts_ob;   // 观测二维码的顶点
   std::vector<cv::Point3f> pts_tag;  // 对应id二维码的顶点
 
-  for (int i = 0; i < ap_ptr_->detect_num(); i++) {
+  for (size_t i = 0; i < ap_ptr_->detect_num(); i++) {
     auto [this_id, these_vertex] = ap_ptr_->get(i);
     if (tag_map_.find(this_id) != tag_map_.end()) {  // if this id is in the tag_map_
       pts_tag = tag_map_[this_id];
@@ -231,12 +232,7 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
 
   // if the position of the observed tags is computed, store the result.
   if (!pts_ob.empty()) {
-    cv::Mat r(3, 3, CV_32FC1);
-    cv::Mat t(3, 1, CV_32FC1);
-    pose_estimation_3d3d(pts_ob, pts_tag, r, t);
-
-    this_outcome.R = r;
-    this_outcome.T = t;
+    pose_estimation_3d3d(pts_ob, pts_tag, this_outcome.R, this_outcome.T);
 
     vector_to_pcl(pts_ob, this_outcome.pts_ob);
     vector_to_pcl(pts_tag, this_outcome.pts_tag);
@@ -255,7 +251,10 @@ void TagDetection::vector_to_pcl(const std::vector<cv::Point3f>& pts, pcl::Point
   std::transform(pts.begin(), pts.end(), cloud->points.begin(), [](const auto& p) { return pcl::PointXYZ{p.x, p.y, p.z}; });
 }
 
-void TagDetection::pose_estimation_3d3d(const std::vector<cv::Point3f>& pts1, const std::vector<cv::Point3f>& pts2, cv::Mat& R, cv::Mat& T) {
+void TagDetection::pose_estimation_3d3d(const std::vector<cv::Point3f>& pts1,
+                                        const std::vector<cv::Point3f>& pts2,
+                                        Eigen::Matrix3d&                R,
+                                        Eigen::Vector3d&                T) {
   const int   n  = static_cast<int>(pts1.size());
   cv::Point3f p1 = std::accumulate(pts1.begin(), pts1.end(), cv::Point3f(0.0f));
   cv::Point3f p2 = std::accumulate(pts2.begin(), pts2.end(), cv::Point3f(0.0f));
@@ -281,9 +280,6 @@ void TagDetection::pose_estimation_3d3d(const std::vector<cv::Point3f>& pts1, co
     u.col(2) *= -1.0;
   }
 
-  Eigen::Matrix3d r = u * (v.transpose());
-  Eigen::Vector3d t = Eigen::Vector3d(p1.x, p1.y, p1.z) - r * Eigen::Vector3d(p2.x, p2.y, p2.z);
-
-  cv::eigen2cv(r, R);
-  cv::eigen2cv(t, T);
+  R = u * (v.transpose());
+  T = Eigen::Vector3d(p1.x, p1.y, p1.z) - R * Eigen::Vector3d(p2.x, p2.y, p2.z);
 }

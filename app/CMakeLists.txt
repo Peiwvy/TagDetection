@@ -26,7 +26,6 @@ target_link_libraries(
   tag_detection
   modules::ApriltagManager
   common::timer
-  common::datatype
   reflcpp::reflcpp
   ${PCL_LIBRARIES}
   ${YAML_CPP_LIBRARIES}

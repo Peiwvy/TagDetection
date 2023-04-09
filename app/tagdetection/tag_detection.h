@@ -1,12 +1,10 @@
 #pragma once
-// mylib
+
 #include "apriltag_manager.h"
-#include "common/datatype/pose.h"
 
 #include "reflcpp/core.hpp"
 #include "reflcpp/yaml.hpp"
 
-#include <opencv2/core/eigen.hpp>
 #include <opencv2/imgproc.hpp>
 
 #include <pcl/point_cloud.h>
@@ -48,8 +46,8 @@ struct Outcome {
   int     id;
   cv::Mat gray;
 
-  cv::Mat R;
-  cv::Mat T;
+  Eigen::Matrix3d R;
+  Eigen::Vector3d T;
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr pts_ob;
   pcl::PointCloud<pcl::PointXYZ>::Ptr pts_tag;
@@ -88,7 +86,8 @@ class TagDetection {
   /****************************************/
   void process();
   void detect_tag(const std::vector<std::vector<float>>& points);
-  void pose_estimation_3d3d(const std::vector<cv::Point3f>&, const std::vector<cv::Point3f>&, cv::Mat&, cv::Mat&);
+  static void
+  pose_estimation_3d3d(const std::vector<cv::Point3f>& pts1, const std::vector<cv::Point3f>& pts2, Eigen::Matrix3d& R, Eigen::Vector3d& T);
 
  private:
   std::mutex pointcloud_ptr_mtx_;
@@ -103,10 +102,8 @@ class TagDetection {
 
   std::unordered_map<int, std::vector<cv::Point3f>> tag_map_;
 
-  void vector_to_pcl(const std::vector<cv::Point3f>& pts, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud);
+  static void vector_to_pcl(const std::vector<cv::Point3f>& pts, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud);
 
  public:
   Outcome this_outcome;
-
-  datatype::Pose thispose;
 };
