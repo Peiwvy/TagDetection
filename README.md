@@ -82,3 +82,15 @@ roscore
 
 
 
+
+
+release detect_tag  140.676 ms feed_pointcloud 7.22144 ms
+
+优化 detect
+detect_tag ] average time usage: 155.016 ms , called times: 27
+I0407 16:42:24.504408 32186 timer.h:46] > [ feed_pointcloud ] average time usage: 7.50255 ms , called times: 27
+
+优化 optimize
+] >>> ===== Printing run time =====
+I0407 17:13:49.818814  5091 timer.h:46] > [ detect_tag ] average time usage: 146.111 ms , called times: 29
+I0407 17:13:49.818840  5091 timer.h:46] > [ feed_pointcloud ] average time usage: 7.32773 ms , called times: 29

@@ -1,8 +1,8 @@
 #include "tag_detection.h"
-
 #include "timer.h"
 #include <cmath>
 
+#include <opencv2/core/eigen.hpp>
 TagDetection::TagDetection(const std::string& config_file) {
   auto conf = YAML::LoadFile(config_file);
 
@@ -141,15 +141,34 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
 
   // normalize the intensity, otherwise we cannot transfer it into CV Mat
   // notice: return a pointer to a new float array containing the range values
-  cv::Mat image;
-  range_image_i.setUnseenToMaxRange();
+  float* ranges = range_image_i.getRangesArray();  // this will get the intensity values
+  float  max    = -FLT_MAX;
+  for (int i = 0, n = range_image_i.width * range_image_i.height; i < n; ++i) {
+    float val = *(ranges + i);
+    if (val >= -FLT_MAX && val <= FLT_MAX) {
+      max = std::max(max, val);
+    }
+  }
 
-  cv::Mat rgb(range_image_i.height,
-              range_image_i.width,
-              CV_8UC3,
-              pcl::visualization::FloatImageUtils::getVisualImage(range_image_i.getRangesArray(), range_image_i.width, range_image_i.height));
-  // cv::Mat rgb = pcl::visualization::FloatImageUtils::getVisualImage(range_image_i.getRangesArray(), range_image_i.width, range_image_i.height);
-  cv::cvtColor(rgb, image, cv::COLOR_RGB2BGR);
+  // Create cv::Mat
+  cv::Mat       image(range_image_i.height, range_image_i.width, CV_8UC4);
+  unsigned char r, g, b;
+
+  // pcl::PointCloud to cv::Mat
+  for (int y = 0; y < range_image_i.height; y++) {
+    for (int x = 0; x < range_image_i.width; x++) {
+      pcl::PointWithRange range_pt = range_image_i.getPoint(x, y);
+      // normalize
+      float value = range_pt.range / max;
+      // Get RGB color values for a given float in [0, 1]
+      pcl::visualization::FloatImageUtils::getColorForFloat(value, r, g, b);
+
+      image.at<cv::Vec4b>(y, x)[0] = b;
+      image.at<cv::Vec4b>(y, x)[1] = g;
+      image.at<cv::Vec4b>(y, x)[2] = r;
+      image.at<cv::Vec4b>(y, x)[3] = 255;
+    }
+  }
 
   // convert the CV Mat to a grayscale image for detections.
   cv::Mat gray;
@@ -227,31 +246,26 @@ void TagDetection::detect_tag(const std::vector<std::vector<float>>& points) {
     this_outcome.update = true;
   }
 }
+
 void TagDetection::vector_to_pcl(const std::vector<cv::Point3f>& pts, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) {
   cloud->clear();
-  cloud->width  = pts.size();
+  cloud->width  = static_cast<uint32_t>(pts.size());
   cloud->height = 1;
-  cloud->points.resize(cloud->width * cloud->height);
-  for (size_t i = 0; i < pts.size(); ++i) {
-    cloud->points[i] = pcl::PointXYZ(pts[i].x, pts[i].y, pts[i].z);
-  }
+  cloud->points.resize(cloud->width);
+
+  std::transform(pts.begin(), pts.end(), cloud->points.begin(), [](const auto& p) { return pcl::PointXYZ{p.x, p.y, p.z}; });
 }
 
 void TagDetection::pose_estimation_3d3d(const std::vector<cv::Point3f>& pts1, const std::vector<cv::Point3f>& pts2, cv::Mat& R, cv::Mat& T) {
-  cv::Point3f p1, p2;  // center of mass
-  int         N = pts1.size();
-  for (int i = 0; i < N; i++) {
-    p1 += pts1[i];
-    p2 += pts2[i];
-  }
-  p1 = cv::Point3f(cv::Vec3f(p1) / N);
-  p2 = cv::Point3f(cv::Vec3f(p2) / N);
+  const int   N  = static_cast<int>(pts1.size());
+  cv::Point3f p1 = std::accumulate(pts1.begin(), pts1.end(), cv::Point3f(0.0f));
+  cv::Point3f p2 = std::accumulate(pts2.begin(), pts2.end(), cv::Point3f(0.0f));
+  p1             = p1 * (1.0f / N);
+  p2             = p2 * (1.0f / N);
 
-  std::vector<cv::Point3f> q1(N), q2(N);  // remove the center
-  for (int i = 0; i < N; i++) {
-    q1[i] = pts1[i] - p1;
-    q2[i] = pts2[i] - p2;
-  }
+  std::vector<cv::Point3f> q1(N), q2(N);
+  std::transform(pts1.begin(), pts1.end(), q1.begin(), [&](const auto& p) { return p - p1; });
+  std::transform(pts2.begin(), pts2.end(), q2.begin(), [&](const auto& p) { return p - p2; });
 
   // compute q1*q2^T
   Eigen::Matrix3d w = Eigen::Matrix3d::Zero();
@@ -259,21 +273,17 @@ void TagDetection::pose_estimation_3d3d(const std::vector<cv::Point3f>& pts1, co
     w += Eigen::Vector3d(q1[i].x, q1[i].y, q1[i].z) * Eigen::Vector3d(q2[i].x, q2[i].y, q2[i].z).transpose();
   }
 
-  // SVD on W
   Eigen::JacobiSVD<Eigen::Matrix3d> svd(w, Eigen::ComputeFullU | Eigen::ComputeFullV);
   Eigen::Matrix3d                   u = svd.matrixU();
   Eigen::Matrix3d                   v = svd.matrixV();
 
   if (u.determinant() * v.determinant() < 0) {
-    for (int x = 0; x < 3; ++x) {
-      u(x, 2) *= -1;
-    }
+    u.col(2) *= -1.0;
   }
 
   Eigen::Matrix3d r = u * (v.transpose());
   Eigen::Vector3d t = Eigen::Vector3d(p1.x, p1.y, p1.z) - r * Eigen::Vector3d(p2.x, p2.y, p2.z);
 
-  // convert to cv::Mat
-  R = (cv::Mat_<double>(3, 3) << r(0, 0), r(0, 1), r(0, 2), r(1, 0), r(1, 1), r(1, 2), r(2, 0), r(2, 1), r(2, 2));
-  T = (cv::Mat_<double>(3, 1) << t(0, 0), t(1, 0), t(2, 0));
+  cv::eigen2cv(r, R);
+  cv::eigen2cv(t, T);
 }
