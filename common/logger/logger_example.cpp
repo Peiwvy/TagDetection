@@ -1,4 +1,4 @@
-#include "common/logger.hpp"
+#include "logger.hpp"
 #define MODULE_NAME "GLOG_v1.2"
 
 #include <filesystem>

@@ -1,4 +1,4 @@
-#include "common/logger.hpp"
+#include "logger.hpp"
 
 Logger::Logger(int& argsize, char**& program, std::string&& path) {
   google::InitGoogleLogging(program[0]);
